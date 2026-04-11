@@ -1,6 +1,7 @@
 /*
     ToDos:
         - save reset to eeprom
+        - do not wait til eeprom is ready to write
 */
 
 #include <avr/io.h>
@@ -182,9 +183,6 @@ void gpio_init(void)
 
     // PB3, PB4 as inputs
     DDRB &= ~((1 << PB3) | (1 << PB4));
-
-    // Optional: enable pull-ups on inputs
-    // PORTB |= (1 << PB3) | (1 << PB4);
 }
 
 /* =========================
@@ -283,9 +281,6 @@ void set_leader_lights(uint8_t value)
 int main(void)
 {
     (void)gpio_init();
-
-    // DDRB |= (1 << PB3); // LED pin output
-
     (void)timer0_init();
     (void)timer1_init();
 
@@ -325,7 +320,7 @@ int main(void)
         }
 
         uint16_t time = timer_us + (uint16_t)t;
-        if ((time - timer_ms_flag) > (uint16_t)1000)
+        if ((uint16_t)(time - timer_ms_flag) > (uint16_t)1000)
         {
             timer_ms_flag = time;
             timer_ms++;
@@ -347,11 +342,6 @@ int main(void)
                 {
                     ir_state = IR_RELEASE; // release id detection after status message
 
-                    /*
-                    if (command == 16)
-                        PORTB ^= (1 << PB3);
-                    */
-
                     uint8_t low = msg & 0xFF;
                     uint8_t high = msg >> 8;
 
@@ -360,7 +350,6 @@ int main(void)
 
                     if (0x01 == command) // 16
                     {                    // startlights
-                        // PORTB ^= (1 << PB3);
                         switch (value)
                         {
                         case 0x00: // all lights out
