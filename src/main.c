@@ -1,12 +1,11 @@
 /*
     ToDos:
-        - save reset to eeprom too
+        - save reset to eeprom
 */
 
 #include <avr/io.h>
 #include <util/delay.h>
 
-// consider timer with 250kHz -> 4us / rollover after 1020ms
 #define MANCHESTER_GAP_THRESHOLD 180U //
 #define MANCHESTER_GLITCH_FILTER 16U  // ignore pulses shorter than ~16 µs
 #define MANCHESTER_MIN_GAP 75U        //
@@ -23,18 +22,6 @@ typedef enum
     ON,
     OFF
 } LED_STATE;
-
-typedef enum
-{
-    ONE,
-    TWO,
-    THREE,
-    FOUR,
-    FIVE,
-    SIX,
-    SEVEN,
-    EIGHT
-} LED_SEQUENCE;
 
 typedef enum
 {
@@ -83,13 +70,23 @@ typedef enum
     SETTINGS_ON_OFF_2
 } SETTINGS;
 
+
+/* =========================
+   LUT
+   ========================= */
+
 // lsb decode id
 uint8_t id_lut_reverb[8] = { // 0, 1, 2, 3, 4, 5, 6, 7
     0x00, 0x04, 0x02, 0x06, 0x01, 0x05, 0x03, 0x07};
 
+
+
+/* =========================
+   VARIABLES
+   ========================= */
+
 DRIVER driver = {0};
 
-LED_SEQUENCE led = ONE;
 LED_STATE led_state = ON;
 uint16_t led_timer;
 
@@ -116,6 +113,11 @@ uint16_t timer_ms = 0;
 uint16_t timer_ms_flag = 0;
 uint16_t timer_s_flag = 0;
 uint8_t timer1_flag = 0;
+
+
+/* =========================
+   TRACK DATA DECODER
+   ========================= */
 
 uint8_t track_data_decode(uint16_t capture, EdgeDirection direction)
 {
@@ -146,14 +148,14 @@ uint8_t track_data_decode(uint16_t capture, EdgeDirection direction)
     return 0;
 }
 
+/* =========================
+   TIMER SETUP
+   ========================= */
+
 // 125kHz -> 8us
 void timer0_init(void)
 {
-    // Normal mode
     TCCR0A = 0x00;
-
-    // Prescaler = 64
-    // CS01 = 1, CS00 = 1 → divide by 64
     TCCR0B = (1 << CS01) | (1 << CS00);
 
     // Reset counter
@@ -162,12 +164,7 @@ void timer0_init(void)
 
 void timer1_init(void)
 {
-    // Stop timer
     TCCR1 = 0x00;
-
-    // Normal mode (no PWM, no CTC)
-    // Prescaler = 8 → 1 MHz timer clock
-    // CS13:0 = 0b0010
     TCCR1 |= (1 << CS12);
 
     // Reset counter
@@ -238,7 +235,7 @@ unsigned char EEPROM_read(unsigned char ucAddress)
 }
 
 /* =========================
-   MAIN
+   LEADER LIGHT
    =========================
 */
 
@@ -277,6 +274,11 @@ void set_leader_lights(uint8_t value)
         PORTB &= ~(1 << PB2);
     }
 }
+
+
+/* =========================
+   MAIN
+   ========================= */
 
 int main(void)
 {
@@ -328,13 +330,6 @@ int main(void)
             timer_ms_flag = time;
             timer_ms++;
         }
-
-        /* check timer ms
-        if ((timer_ms - timer_s_flag) > (uint16_t)1000){
-            timer_s_flag = timer_ms;
-            PORTB ^= (1 << PB2);
-        }
-        */
 
         // read track signal and process
         uint8_t input_track = read_input(PB4);
@@ -577,81 +572,3 @@ int main(void)
         }
     }
 }
-
-/*
-        switch (led)
-        {
-        case ONE:
-            if ((timer_ms - led_timer) > (uint16_t)3000)
-            {
-                led_timer = timer_ms;
-                // PORTB ^= (1 << PB3);
-                PORTB |= (1 << PB3); // on
-                led = TWO;
-            }
-            break;
-        case TWO:
-            if ((timer_ms - led_timer) > (uint16_t)12)
-            {
-                led_timer = timer_ms;
-                // PORTB ^= (1 << PB3);
-                PORTB &= ~(1 << PB3); // off
-                led = THREE;
-            }
-            break;
-        case THREE:
-            if ((timer_ms - led_timer) > (uint16_t)50)
-            {
-                led_timer = timer_ms;
-                // PORTB ^= (1 << PB3);
-                PORTB |= (1 << PB3); // on
-                led = FOUR;
-            }
-            break;
-        case FOUR:
-            if ((timer_ms - led_timer) > (uint16_t)12)
-            {
-                led_timer = timer_ms;
-                // PORTB ^= (1 << PB3);
-                PORTB &= ~(1 << PB3); // off
-                led = FIVE;
-            }
-            break;
-        case FIVE:
-            if ((timer_ms - led_timer) > (uint16_t)50)
-            {
-                led_timer = timer_ms;
-                // PORTB ^= (1 << PB3);
-                PORTB |= (1 << PB3); // on
-                led = SIX;
-            }
-            break;
-        case SIX:
-            if ((timer_ms - led_timer) > (uint16_t)12)
-            {
-                led_timer = timer_ms;
-                // PORTB ^= (1 << PB3);
-                PORTB &= ~(1 << PB3); // off
-                led = SEVEN;
-            }
-            break;
-        case SEVEN:
-            if ((timer_ms - led_timer) > (uint16_t)50)
-            {
-                led_timer = timer_ms;
-                // PORTB ^= (1 << PB3);
-                PORTB |= (1 << PB3); // on
-                led = EIGHT;
-            }
-            break;
-        case EIGHT:
-            if ((timer_ms - led_timer) > (uint16_t)12)
-            {
-                led_timer = timer_ms;
-                // PORTB ^= (1 << PB3);
-                PORTB &= ~(1 << PB3); // off
-                led = ONE;
-            }
-            break;
-        }
-            */
