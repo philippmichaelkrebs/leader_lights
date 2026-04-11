@@ -1,0 +1,12 @@
+obj/
+
+.vscode
+
+# C extensions
+*.o
+*.so
+*.elf
+*.hex
+
+flash.sh
+fuse.sh
